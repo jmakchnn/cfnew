@@ -1,40 +1,28 @@
-name: 手动同步 Worker 文件
+name: 同步 Worker 文件
 
 on:
-  # 允许手动触发工作流
-  workflow_dispatch:
-  # 保留原有的触发条件，当“少年你相信光吗”文件发生变更时也会自动运行
   push:
     paths:
-      - '少年你相信光吗'
+      - '少年你相信光吗'  # 关键：确保文件名完全一致
 
 jobs:
-  sync-worker:
+  sync:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # 确保工作流有写入权限以提交更改
     steps:
-      # 步骤1：获取仓库代码
       - name: 检出代码
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      # 步骤2：复制并重命名文件
-      - name: 同步文件
-        run: |
-          # 检查原文件是否存在
-          if [ -f "少年你相信光吗" ]; then
-            cp "少年你相信光吗" worker.js
-            echo "✅ 文件已同步：'少年你相信光吗' -> 'worker.js'"
-          else
-            echo "❌ 原文件 '少年你相信光吗' 不存在，无法同步"
-            exit 1
-          fi
+      - name: 复制并重命名文件
+        run: cp "少年你相信光吗" worker.js
 
-      # 步骤3：检查是否有文件变动并提交
-      - name: 检查变动并提交
+      - name: 提交更改
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          # 检查worker.js是否有变动
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add worker.js
-          # 提交更改，如果无变动则静默退出
-          git diff --staged --quiet || git commit -m "自动同步: 更新 worker.js [skip ci]"
+          git commit -m "自动同步: 更新 worker.js [skip ci]" || exit 0
           git push
